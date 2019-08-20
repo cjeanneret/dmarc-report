@@ -19,6 +19,7 @@ date_end TEXT,
 count INTEGER,
 report_id TEXT,
 source_ip TEXT,
+ip_reverse TEXT,
 domain TEXT,
 dkim TEXT,
 spf TEXT,
@@ -34,13 +35,13 @@ org_name TEXT)
 '''
 
 INSERT_RECORD = '''
-INSERT INTO records(report_id, source_ip, dkim, spf, type, comment, header_from, dkim_domain, dkim_result, dkim_hresult, spf_domain, spf_result, org_name, domain, count, date_begin, date_end) 
+INSERT INTO records(report_id, source_ip, dkim, spf, type, comment, header_from, dkim_domain, dkim_result, dkim_hresult, spf_domain, spf_result, org_name, domain, count, date_begin, date_end, ip_reverse) 
 VALUES("%(report_id)s", "%(s_ip)s", "%(dkim)s", "%(spf)s",
 "%(type)s", "%(comment)s", "%(header_from)s",
 "%(dkim_domain)s", "%(dkim_result)s",
 "%(dkim_hresult)s", "%(spf_domain)s",
 "%(spf_result)s", "%(org_name)s", "%(domain)s", %(count)d,
-"%(date_begin)s", "%(date_end)s")
+"%(date_begin)s", "%(date_end)s", "%(ip_reverse)s")
 '''
 
 CHECK_RECORD = '''
@@ -50,7 +51,7 @@ report_id = ?
 '''
 
 QUERY_RECORDS = '''
-SELECT source_ip, SUM(count), domain, org_name, date_begin, date_end, dkim, spf
+SELECT source_ip, SUM(count), domain, org_name, date_begin, date_end, dkim, spf, ip_reverse
 FROM records GROUP BY source_ip
 ORDER by date_begin DESC, date_end ASC
 '''
@@ -131,6 +132,13 @@ class dmarc():
             self.__data['count'] = int(self.__data['count'])
 
             if not self.__check():
+                try:
+                    self.__data['ip_reverse'] = socket.gethostbyaddr(self.__data['s_ip'])[0]
+                    print('Got rdns for %s: %s' % (self.__data['s_ip'], self.__data['ip_reverse']))
+                except socket.herror:
+                    print('Failed rdns query for %s' % self.__data['s_ip'])
+                    self.__data['ip_reverse'] = 'NXDOMAIN'
+
                 inserted += 1
                 sql = INSERT_RECORD %  self.__data
                 self.__cursor.execute(sql)
