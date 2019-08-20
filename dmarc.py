@@ -68,6 +68,7 @@ class dmarc():
         self.__template_filename = 'template.j2'
         self.__rendered_filename = 'report.html'
 
+        self.__rdns = {}
         self.__domain_mx = []
         if 'MY_IPS' in os.environ:
             self.__my_ips = os.environ['MY_IPS'].split()
@@ -132,12 +133,17 @@ class dmarc():
             self.__data['count'] = int(self.__data['count'])
 
             if not self.__check():
-                try:
-                    self.__data['ip_reverse'] = socket.gethostbyaddr(self.__data['s_ip'])[0]
-                    print('Got rdns for %s: %s' % (self.__data['s_ip'], self.__data['ip_reverse']))
-                except socket.herror:
-                    print('Failed rdns query for %s' % self.__data['s_ip'])
-                    self.__data['ip_reverse'] = 'NXDOMAIN'
+                if self.__data['s_ip'] not in self.__rdns:
+                    try:
+                        self.__data['ip_reverse'] = socket.gethostbyaddr(self.__data['s_ip'])[0]
+                        print('Got rdns for %s: %s' % (self.__data['s_ip'], self.__data['ip_reverse']))
+                    except socket.herror:
+                        print('Failed rdns query for %s' % self.__data['s_ip'])
+                        self.__data['ip_reverse'] = 'NXDOMAIN'
+                    self.__rdns[self.__data['s_ip']] = self.__data['ip_reverse']
+                else:
+                    print('Using runtime cache for %s rdns' % self.__data['s_ip'])
+                    self.__data['ip_reverse'] = self.__rdns[self.__data['s_ip']]
 
                 inserted += 1
                 sql = INSERT_RECORD %  self.__data
