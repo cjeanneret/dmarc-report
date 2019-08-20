@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>DMARC report</title>
+  </head>
+  <body>
+  <table>
+  <tr>
+    <th>IP Address</th>
+    <th>Count</th>
+    <th>Domain</th>
+    <th>Reporter</th>
+    <th>Report date</th>
+  </tr>
+  {% for line in records %}
+  <tr>
+    {% if line[0] in my_ip %}
+    <td style="color:red">{{ line[0] }}</td>
+    {% else %}
+    <td>{{ line[0] }}</td>
+    {% endif %}
+    <td>{{ line[1] }}</td>
+    <td>{{ line[2] }}</td>
+    <td>{{ line[3] }}</td>
+    <td>{{ line[4] }} - {{ line[5] }}</td>
+  </tr>
+  {% endfor %}
+  </body>
+</html>

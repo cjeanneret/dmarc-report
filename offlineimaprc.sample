@@ -1,0 +1,20 @@
+[general]
+accounts = DMARC
+ui = Quiet
+
+[Account DMARC]
+localrepository = Local
+remoterepository = Remote
+
+[Repository Remote]
+type = IMAP
+remotehost = imap.change-me.tld
+remoteuser = changeme
+remotepass = changme-password
+ssl = yes
+sslcacertfile = /etc/ssl/certs/ca-bundle.crt
+
+[Repository Local]
+type = Maildir
+localfolders = ./mails
+restoreatime = yes
