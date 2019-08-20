@@ -47,9 +47,10 @@ report_id = ?
 '''
 
 QUERY_RECORDS = '''
-SELECT source_ip, SUM(count), domain, org_name, date_begin, date_end
-FROM records where dkim = 'fail' or spf = 'fail' GROUP BY source_ip
+SELECT source_ip, SUM(count), domain, org_name, date_begin, date_end, dkim, spf
+FROM records GROUP BY source_ip
 ORDER by date_begin DESC, date_end ASC
+LIMIT 100
 '''
 
 class dmarc():
@@ -128,14 +129,7 @@ class dmarc():
 
         render_vars = {
             'records': records,
-            'my_ip': [
-                '195.201.47.87',
-                '2a01:4f8:1c0c:807f::1',
-                '159.69.100.16',
-                '2a01:4f8:c01f:13::1',
-                '95.216.176.128',
-                '2a01:4f9:c01f:21::1',
-                ]
+            'my_ip': os.environ['MY_IPS'].split()
         }
         output_text = render_environment.get_template(self.__template_filename).render(render_vars)
         with open(rendered_file_path, "w") as result_file:

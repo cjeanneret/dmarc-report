@@ -1,31 +1,75 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
+    <link rel="stylesheet" href="./milligram/milligram.min.css">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+    .fixed {
+      position: fixed;
+      z-index: 150;
+      right: 10px;
+      bottom: 10px;
+    }
+    table {
+      counter-reset: item;
+      list-style-type: decimal;
+    }
+    td.counter {
+      padding-left: 4px;
+    }
+    td.counter:before {
+      content: counter(item, decimal) '. ';
+      counter-increment: item;
+      font-size: 0.7em;
+      font-color: rgb(204, 204, 204);
+    }
+    tr.red td {
+      background-color: rgb(255, 128, 128);
+      font-weight: bold;
+    }
+    tr.green td {
+      background-color: rgb(153, 255, 153);
+    }
+    </style>
     <title>DMARC report</title>
   </head>
   <body>
-  <table>
-  <tr>
-    <th>IP Address</th>
-    <th>Count</th>
-    <th>Domain</th>
-    <th>Reporter</th>
-    <th>Report date</th>
-  </tr>
-  {% for line in records %}
-  <tr>
-    {% if line[0] in my_ip %}
-    <td style="color:red">{{ line[0] }}</td>
-    {% else %}
-    <td>{{ line[0] }}</td>
-    {% endif %}
-    <td>{{ line[1] }}</td>
-    <td>{{ line[2] }}</td>
-    <td>{{ line[3] }}</td>
-    <td>{{ line[4] }} - {{ line[5] }}</td>
-  </tr>
-  {% endfor %}
+    <a name="#top"></a>
+    <a href="#top" class="button fixed">Top</a>
+    <table>
+      <thead>
+        <tr>
+          <th>IP Address</th>
+          <th>Count</th>
+          <th>Domain</th>
+          <th>SPF</th>
+          <th>DKIM</th>
+          <th>Reporter</th>
+          <th>Report date</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for line in records %}
+        {% if line[0] in my_ip %}
+          {% if line[6] == 'fail' or line[7] == 'fail' %}
+          <tr class="red">
+          {% else %}
+          <tr class="green">
+          {% endif %}
+        {% else %}
+          <tr>
+        {% endif %}
+          <td class="counter">{{ line[0] }}</td>
+          <td>{{ line[1] }}</td>
+          <td>{{ line[2] }}</td>
+          <td>{{ line[6] }}</td>
+          <td>{{ line[7] }}</td>
+          <td>{{ line[3] }}</td>
+          <td>{{ line[4] }} - {{ line[5] }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </body>
 </html>
