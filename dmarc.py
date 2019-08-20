@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 
 import datetime
+import dns.resolver
 import glob
 import gzip
 import jinja2
 import os
+import socket
 import sqlite3
+import sys
 import xml.etree.ElementTree as ET
 import zipfile
 
@@ -50,7 +53,6 @@ QUERY_RECORDS = '''
 SELECT source_ip, SUM(count), domain, org_name, date_begin, date_end, dkim, spf
 FROM records GROUP BY source_ip
 ORDER by date_begin DESC, date_end ASC
-LIMIT 100
 '''
 
 class dmarc():
@@ -64,6 +66,12 @@ class dmarc():
         self.__data = {}
         self.__template_filename = 'template.j2'
         self.__rendered_filename = 'report.html'
+
+        self.__domain_mx = []
+        if 'MY_IPS' in os.environ:
+            self.__my_ips = os.environ['MY_IPS'].split()
+        else:
+            self.__my_ips = []
 
     def __prepare(self):
         if not os.path.exists(self.__db):
@@ -82,6 +90,15 @@ class dmarc():
         date = datetime.datetime.fromtimestamp(int(timestamp))
         return date.date()
 
+    def __get_mx(self, domain):
+        if domain not in self.__domain_mx:
+            print('Fetching MX for %s' % domain)
+            self.__domain_mx.append(domain)
+            for x in dns.resolver.query(domain, 'MX'):
+                mx = x.to_text().split()[1]
+                ips = [ str(i[4][0]) for i in socket.getaddrinfo(mx, 25)]
+                self.__my_ips.extend(ips)
+
     def __insert(self):
         inserted = 0
         self.__data['org_name'] = self.doc.findtext("report_metadata/org_name", default="NA")
@@ -92,6 +109,9 @@ class dmarc():
         self.__data['date_begin'] = self.__format_date(self.__data['date_begin'])
         self.__data['date_end'] = self.doc.findtext("report_metadata/date_range/end")
         self.__data['date_end'] = self.__format_date(self.__data['date_end'])
+
+        if 'MY_IPS' not in os.environ:
+            self.__get_mx(self.__data['domain'])
 
         container = self.doc.findall("record")
         for elem in container:
@@ -129,7 +149,7 @@ class dmarc():
 
         render_vars = {
             'records': records,
-            'my_ip': os.environ['MY_IPS'].split()
+            'my_ip': self.__my_ips
         }
         output_text = render_environment.get_template(self.__template_filename).render(render_vars)
         with open(rendered_file_path, "w") as result_file:
