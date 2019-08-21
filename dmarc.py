@@ -14,8 +14,8 @@ import zipfile
 
 TABLE_RECORDS = '''
 CREATE TABLE records (id INTEGER PRIMARY KEY AUTOINCREMENT,
-date_begin TEXT,
-date_end TEXT,
+date_begin INTEGER,
+date_end INTEGER,
 count INTEGER,
 report_id TEXT,
 source_ip TEXT,
@@ -51,9 +51,8 @@ report_id = ?
 '''
 
 QUERY_RECORDS = '''
-SELECT source_ip, SUM(count), domain, org_name, date_begin, date_end, dkim, spf, ip_reverse
-FROM records GROUP BY source_ip
-ORDER by date_begin DESC, date_end ASC
+SELECT source_ip, count, domain, org_name, date_begin, date_end, dkim, spf, ip_reverse
+FROM records ORDER by date_begin DESC, date_end ASC
 '''
 
 class dmarc():
@@ -107,10 +106,10 @@ class dmarc():
         self.__data['domain'] = self.doc.findtext("policy_published/domain", default="NA")
         self.__data['report_id'] = self.doc.findtext("report_metadata/report_id", default="NA")
 
-        self.__data['date_begin'] = self.doc.findtext("report_metadata/date_range/begin")
-        self.__data['date_begin'] = self.__format_date(self.__data['date_begin'])
-        self.__data['date_end'] = self.doc.findtext("report_metadata/date_range/end")
-        self.__data['date_end'] = self.__format_date(self.__data['date_end'])
+        self.__data['date_begin'] = int(self.doc.findtext("report_metadata/date_range/begin"))
+        #self.__data['date_begin'] = self.__format_date(self.__data['date_begin'])
+        self.__data['date_end'] = int(self.doc.findtext("report_metadata/date_range/end"))
+        #self.__data['date_end'] = self.__format_date(self.__data['date_end'])
 
         if 'MY_IPS' not in os.environ:
             self.__get_mx(self.__data['domain'])
@@ -157,6 +156,7 @@ class dmarc():
         template_file_path = os.path.join(current_path, self.__template_filename)
         rendered_file_path = os.path.join(current_path, self.__rendered_filename)
         render_environment = jinja2.Environment(loader=jinja2.FileSystemLoader(current_path))
+        render_environment.filters['datetime'] = self.__format_date
 
         self.__cursor.execute(QUERY_RECORDS)
         records = self.__cursor.fetchall()
