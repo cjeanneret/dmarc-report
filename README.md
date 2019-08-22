@@ -28,6 +28,9 @@ Name *must* be offlineimaprc
 The script you want to launch on a regular basis. Will call the other ones in order to
 provide you an easy to read report.
 
+### Milligram
+[Lightweight CSS framework](https://milligram.io/), under MIT license.
+
 ## IPs
 The report will highlight when your IPs are listed (red if failed, else green). There are
 two ways to provide them:
