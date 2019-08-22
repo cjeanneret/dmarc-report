@@ -4,6 +4,14 @@ import email
 import os
 import dmarc
 
+ACCEPTED_MIME = [
+        'application/gzip',
+        'application/x-gzip',
+        'application/zip',
+        'application/x-zip-compressed',
+        'application/octet-stream',
+        ]
+
 def save_file(attachment):
     f_name = attachment.get_filename()
     dest = os.path.join('./reports', f_name)
@@ -18,8 +26,8 @@ for root, dirs, files in os.walk('./mails/INBOX/'):
         mail_file = os.path.join(root, f)
         msg = email.message_from_file(open(mail_file))
         if msg.is_multipart():
-            attachment = msg.get_payload()[1]
-            save_file(attachment)
+            for attach in msg.get_payload():
+                if attach.get_content_type() in ACCEPTED_MIME: save_file(attach)
         else:
             save_file(msg)
 
