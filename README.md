@@ -37,3 +37,6 @@ two ways to provide them:
 Please note: the script won't check your SPF record, meaning it won't fetch specific
 IPs (at least for now). If you have other IPs than your MX, you must provide the full
 list using the MY_IPS environment variable.
+
+## License
+Shipped under MIT license.
