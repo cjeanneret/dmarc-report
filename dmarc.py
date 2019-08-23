@@ -171,16 +171,22 @@ class dmarc():
 
     def parse(self):
         inserted = 0
-        for f in glob.glob('./reports/*.gz'):
-            with gzip.open(f, 'rb') as f:
-                dom = ET.parse(f)
-                self.doc = dom.getroot()
-                inserted += self.__insert()
+        for f in glob.glob('./reports/*.gz{,ip}'):
+            with gzip.open(f, 'rb') as fp:
+                try:
+                    dom = ET.parse(fp)
+                    self.doc = dom.getroot()
+                    inserted += self.__insert()
+                except:
+                    print("invalid file: "+f)
         for f in glob.glob('./reports/*.zip'):
             with zipfile.ZipFile(f, 'r') as myzip:
                 with myzip.open(myzip.namelist()[0]) as zf:
-                    dom = ET.parse(zf)
-                    self.doc = dom.getroot()
-                    inserted += self.__insert()
+                    try:
+                        dom = ET.parse(zf)
+                        self.doc = dom.getroot()
+                        inserted += self.__insert()
+                    except:
+                        print("invalid file: "+f)
 
         print('Inserted %i record(s)' % inserted)
