@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
+import dmarc
 import email
 import os
-import dmarc
 
 ACCEPTED_MIME = [
         'application/gzip',

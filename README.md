@@ -3,8 +3,10 @@ Simple scripts providing an easy way to get a human readable reporting for DMARC
 
 ## Dependencies
 - offlineimap
+- (python3) progressbar2
 - (python3) dns
 - (python3) jinja2
+- (python3) mimetypes
 - (python3) socket
 - (python3) sqlite3
 - (python3) zipfile

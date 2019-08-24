@@ -5,7 +5,9 @@ import dns.resolver
 import glob
 import gzip
 import jinja2
+import mimetypes as filetype
 import os
+import progressbar
 import socket
 import sqlite3
 import sys
@@ -45,7 +47,7 @@ VALUES("%(report_id)s", "%(s_ip)s", "%(dkim)s", "%(spf)s",
 '''
 
 CHECK_RECORD = '''
-SELECT COUNT(*) FROM records WHERE
+SELECT id FROM records WHERE
 source_ip = ? AND
 report_id = ?
 '''
@@ -54,6 +56,22 @@ QUERY_RECORDS = '''
 SELECT source_ip, count, domain, org_name, date_begin, date_end, dkim, spf, ip_reverse
 FROM records ORDER by date_begin DESC, date_end ASC
 '''
+
+TABLE_RDNS = '''
+CREATE TABLE rdns (ip TEXT PRIMARY KEY, rdns TEXT)
+'''
+
+QUERY_RDNS = '''
+SELECT rdns FROM rdns WHERE ip="%s"
+'''
+
+INSERT_RDNS = '''
+INSERT INTO rdns(ip, rdns) VALUES(?, ?)
+'''
+
+MIME_GZIP = ['application/gzip', 'application/x-gzip']
+MIME_ZIP = ['application/zip', 'application/x-zip-compressed']
+MIME_TRASH = ['application/octet-stream', 'text/xml']
 
 class dmarc():
     def __init__(self):
@@ -67,29 +85,39 @@ class dmarc():
         self.__template_filename = 'template.j2'
         self.__rendered_filename = 'report.html'
 
-        self.__rdns = {}
+        self.__bar = progressbar.ProgressBar(max_value=progressbar.UnknownLength, redirect_stdout=True)
+        self.__counter = 0
+
         self.__domain_mx = []
         if 'MY_IPS' in os.environ:
             self.__my_ips = os.environ['MY_IPS'].split()
         else:
             self.__my_ips = []
 
+    def __del__(self):
+        self.__conn.commit()
+        self.__conn.close()
+
     def __prepare(self):
         if not os.path.exists(self.__db):
             conn = sqlite3.connect(self.__db)
             c = conn.cursor()
             c.execute(TABLE_RECORDS)
+            c.execute(TABLE_RDNS)
             conn.commit()
             conn.close()
 
     def __check(self):
         data = (self.__data['s_ip'], self.__data['report_id'])
         self.__cursor.execute(CHECK_RECORD, data)
-        return self.__cursor.fetchone()[0] > 0
+        return self.__cursor.fetchone() is not None
 
     def __format_date(self, timestamp):
-        date = datetime.datetime.fromtimestamp(int(timestamp))
-        return date.date()
+        try:
+            date = datetime.datetime.fromtimestamp(int(timestamp))
+            return date.date()
+        except:
+            return timestamp
 
     def __get_mx(self, domain):
         if domain not in self.__domain_mx:
@@ -100,6 +128,21 @@ class dmarc():
                 ips = [ str(i[4][0]) for i in socket.getaddrinfo(mx, 25)]
                 self.__my_ips.extend(ips)
 
+    def __rdns(self):
+        self.__cursor.execute(QUERY_RDNS % self.__data['s_ip'])
+        data = self.__cursor.fetchone()
+        if data is not None:
+            return data[0]
+        else:
+            try:
+                rdns = socket.gethostbyaddr(self.__data['s_ip'])[0]
+            except socket.herror:
+                rdns = 'NXDOMAIN'
+            data = (self.__data['s_ip'], rdns)
+            self.__cursor.execute(INSERT_RDNS, data)
+            self.__conn.commit()
+            return rdns
+
     def __insert(self):
         inserted = 0
         self.__data['org_name'] = self.doc.findtext("report_metadata/org_name", default="NA")
@@ -107,9 +150,7 @@ class dmarc():
         self.__data['report_id'] = self.doc.findtext("report_metadata/report_id", default="NA")
 
         self.__data['date_begin'] = int(self.doc.findtext("report_metadata/date_range/begin"))
-        #self.__data['date_begin'] = self.__format_date(self.__data['date_begin'])
         self.__data['date_end'] = int(self.doc.findtext("report_metadata/date_range/end"))
-        #self.__data['date_end'] = self.__format_date(self.__data['date_end'])
 
         if 'MY_IPS' not in os.environ:
             self.__get_mx(self.__data['domain'])
@@ -128,28 +169,17 @@ class dmarc():
             self.__data['spf_domain'] = elem.findtext("auth_results/spf/domain", default="NA")
             self.__data['spf_result'] = elem.findtext("auth_results/spf/result", default="NA")
             self.__data['count'] = elem.findtext("row/count", default="1")
+            self.__data['ip_reverse'] = self.__rdns()
 
             self.__data['count'] = int(self.__data['count'])
 
             if not self.__check():
-                if self.__data['s_ip'] not in self.__rdns:
-                    try:
-                        self.__data['ip_reverse'] = socket.gethostbyaddr(self.__data['s_ip'])[0]
-                        print('Got rdns for %s: %s' % (self.__data['s_ip'], self.__data['ip_reverse']))
-                    except socket.herror:
-                        print('Failed rdns query for %s' % self.__data['s_ip'])
-                        self.__data['ip_reverse'] = 'NXDOMAIN'
-                    self.__rdns[self.__data['s_ip']] = self.__data['ip_reverse']
-                else:
-                    print('Using runtime cache for %s rdns' % self.__data['s_ip'])
-                    self.__data['ip_reverse'] = self.__rdns[self.__data['s_ip']]
-
-                inserted += 1
+                self.__counter += 1
                 sql = INSERT_RECORD %  self.__data
                 self.__cursor.execute(sql)
                 self.__conn.commit()
 
-        return inserted
+            self.__bar.update(self.__counter)
         
     def render(self):
         current_path = os.path.dirname(os.path.abspath(__file__))
@@ -171,22 +201,36 @@ class dmarc():
 
     def parse(self):
         inserted = 0
-        for f in glob.glob('./reports/*.gz{,ip}'):
-            with gzip.open(f, 'rb') as fp:
+
+        for f in glob.glob('./reports/*'):
+            fp = None
+            mime = filetype.guess_type(f)[0]
+            if mime is None:
+                print(f)
+                continue
+            if mime in MIME_GZIP:
+                fp = gzip.open(f, 'rb')
+            elif mime in MIME_ZIP:
+                with zipfile.ZipFile(f, 'r') as myzip:
+                    fp = myzip.open(myzip.namelist()[0])
+            elif mime in MIME_TRASH:
+                try:
+                    with zipfile.ZipFile(f, 'r') as myzip:
+                        fp = myzip.open(myzip.namelist()[0])
+                except zipfile.BadZipFile:
+                    fp = gzip.open(f, 'rb')
+
+            if fp:
                 try:
                     dom = ET.parse(fp)
                     self.doc = dom.getroot()
-                    inserted += self.__insert()
-                except:
-                    print("invalid file: "+f)
-        for f in glob.glob('./reports/*.zip'):
-            with zipfile.ZipFile(f, 'r') as myzip:
-                with myzip.open(myzip.namelist()[0]) as zf:
-                    try:
-                        dom = ET.parse(zf)
-                        self.doc = dom.getroot()
-                        inserted += self.__insert()
-                    except:
-                        print("invalid file: "+f)
+                    self.__insert()
+                except OSError:
+                    fp = open(f, 'r')
+                    dom = ET.parse(fp)
+                    self.doc = dom.getroot()
+                    self.__insert()
+                finally:
+                    fp.close()
 
-        print('Inserted %i record(s)' % inserted)
+        print('Inserted %i record(s)' % self.__counter)
