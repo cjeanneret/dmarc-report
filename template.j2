@@ -40,7 +40,7 @@
       overflow-y: scroll;
     }
     th, td {
-      width: 14%;
+      width: calc(100% / 8);
     }
     </style>
     <title>DMARC report</title>
@@ -54,6 +54,7 @@
           <th>Domain</th>
           <th>SPF</th>
           <th>DKIM</th>
+          <th>Disposition</th>
           <th>Reporter</th>
           <th>Report date</th>
         </tr>
@@ -74,6 +75,7 @@
           <td>{{ line[2] }}</td>
           <td class="{{ line[6] }}">{{ line[6] }}</td>
           <td class="{{ line[7] }}">{{ line[7] }}</td>
+          <td>{{ line[9] }}</td>
           <td>{{ line[3] }}</td>
           <td>{{ line[4] | datetime }} - {{ line[5] | datetime }}</td>
         </tr>

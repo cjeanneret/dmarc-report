@@ -53,7 +53,7 @@ report_id = ?
 '''
 
 QUERY_RECORDS = '''
-SELECT source_ip, count, domain, org_name, date_begin, date_end, dkim, spf, ip_reverse
+SELECT source_ip, count, domain, org_name, date_begin, date_end, dkim, spf, ip_reverse, comment
 FROM records ORDER by date_begin DESC, date_end ASC
 '''
 
@@ -161,7 +161,7 @@ class dmarc():
             self.__data['dkim'] = elem.findtext("row/policy_evaluated/dkim", default="NA")
             self.__data['spf'] = elem.findtext("row/policy_evaluated/spf", default="NA")
             self.__data['type'] = elem.findtext("row/policy_evaluated/reason/type", default="NA")
-            self.__data['comment'] = elem.findtext("row/policy_evaluated/reason/comment", default="NA")
+            self.__data['comment'] = elem.findtext("row/policy_evaluated/disposition", default="NA")
             self.__data['header_from'] = elem.findtext("identifiers/header_from", default="NA")
             self.__data['dkim_domain'] = elem.findtext("auth_results/dkim/domain", default="NA")
             self.__data['dkim_result'] = elem.findtext("auth_results/dkim/result", default="NA")
