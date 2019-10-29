@@ -15,6 +15,8 @@ ACCEPTED_MIME = [
 def save_file(attachment, mtime):
     f_name = attachment.get_filename()
     dest = os.path.join('./reports', f_name)
+    if os.path.exists(dest):
+        return
     with open(dest, 'wb') as f:
         f.write(attachment.get_payload(decode=True))
     os.utime(dest, (mtime, mtime))
