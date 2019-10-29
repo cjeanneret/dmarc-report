@@ -12,11 +12,12 @@ ACCEPTED_MIME = [
         'application/octet-stream',
         ]
 
-def save_file(attachment):
+def save_file(attachment, mtime):
     f_name = attachment.get_filename()
     dest = os.path.join('./reports', f_name)
     with open(dest, 'wb') as f:
         f.write(attachment.get_payload(decode=True))
+    os.utime(dest, (mtime, mtime))
 
 if not os.path.isdir('./reports'):
     os.mkdir('./reports')
@@ -24,12 +25,14 @@ if not os.path.isdir('./reports'):
 for root, dirs, files in os.walk('./mails/INBOX/'):
     for f in files:
         mail_file = os.path.join(root, f)
+        mtime = os.path.getmtime(mail_file)
         msg = email.message_from_file(open(mail_file))
         if msg.is_multipart():
             for attach in msg.get_payload():
-                if attach.get_content_type() in ACCEPTED_MIME: save_file(attach)
+                if attach.get_content_type() in ACCEPTED_MIME:
+                    save_file(attach, mtime)
         else:
-            save_file(msg)
+            save_file(msg, mtime)
 
 i_dmarc = dmarc.dmarc()
 i_dmarc.parse()
