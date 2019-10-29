@@ -232,5 +232,3 @@ class dmarc():
                     self.__insert()
                 finally:
                     fp.close()
-
-        print('Inserted %i record(s)' % self.__counter)
