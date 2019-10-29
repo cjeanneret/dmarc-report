@@ -206,7 +206,7 @@ class dmarc():
             fp = None
             mime = filetype.guess_type(f)[0]
             if mime is None:
-                print(f)
+                print('ERROR: ', f)
                 continue
             if mime in MIME_GZIP:
                 fp = gzip.open(f, 'rb')
@@ -232,3 +232,5 @@ class dmarc():
                     self.__insert()
                 finally:
                     fp.close()
+            else:
+                print('Unknown file: %s' % f)
