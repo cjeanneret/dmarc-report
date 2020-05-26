@@ -203,24 +203,13 @@ class dmarc():
     def parse(self):
         inserted = 0
 
-
-        """
-             DEBUG - A ENELEVER
-        """
-        current_path = os.path.dirname(os.path.abspath(__file__))
-        debug_file_path = os.path.join(current_path, "debug_extension")
-        """
-            FIN DEBUG
-        """
         for f in glob.glob('./reports/*'):
             fp = None
             mime = filetype.guess_type(f)[0]
             mime_tmp = ""
 
             extension = f[f.rfind(".",0,len(f))+1:len(f)]
-            with open(debug_file_path, "w") as result_file:
-                result_file.write(extension)
-
+           
             if mime is None:
                 print('ERROR: ', f)
                 continue
