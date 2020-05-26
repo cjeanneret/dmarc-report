@@ -10,6 +10,7 @@ ACCEPTED_MIME = [
         'application/zip',
         'application/x-zip-compressed',
         'application/octet-stream',
+        'application/xml',
         ]
 
 def save_file(attachment, mtime):
