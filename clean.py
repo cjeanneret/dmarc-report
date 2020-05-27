@@ -4,12 +4,14 @@ import os
 from datetime import datetime
 
 DAY_LIMIT = 90
-DEBUG = True
+DEBUG = False
 
 def clean_folder(path):
 	if not os.path.isdir(path):
 		print("can't find dir "+str(path))
 		return False
+
+	print("Cleaning folder : "+path)
 
 	# get files list
 	f_tab = []
@@ -25,8 +27,7 @@ def clean_folder(path):
 		if res:
 			nb_free_space+=res[6]
 
-	if DEBUG:
-		print("Nb of free spaces : "+str(int((nb_free_space/1000)*100)/100)+" ko\n\n")
+	print("Nb of free spaces : "+str(int((nb_free_space/1000)*100)/100)+" ko\n")
 
 def clean_file(path):
 
@@ -54,6 +55,8 @@ def clean_file(path):
 		# delete the file
 		if DEBUG:
 			print("[Deleting] "+path+"\n---\n")
+		else:			
+			print("[Deleting] "+path)
 		os.remove(path)
 
 		# return file data
