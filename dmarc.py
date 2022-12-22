@@ -72,6 +72,7 @@ INSERT INTO rdns(ip, rdns) VALUES(?, ?)
 MIME_GZIP = ['application/gzip', 'application/x-gzip']
 MIME_ZIP = ['application/zip', 'application/x-zip-compressed']
 MIME_TRASH = ['application/octet-stream', 'text/xml']
+MIME_XML = ['application/xml']
 
 class dmarc():
     def __init__(self):
@@ -205,10 +206,25 @@ class dmarc():
         for f in glob.glob('./reports/*'):
             fp = None
             mime = filetype.guess_type(f)[0]
+            mime_tmp = ""
+
+            extension = f[f.rfind(".",0,len(f))+1:len(f)]
+           
             if mime is None:
                 print('ERROR: ', f)
                 continue
-            if mime in MIME_GZIP:
+
+            if mime in MIME_XML:
+                if extension == "gz":
+                    mime_tmp = mime
+                    mime = MIME_GZIP[0]
+                elif extension == "zip":
+                    mime_tmp = mime
+                    mime = MIME_ZIP[0]
+                else:
+                    fp = open(f,"r")
+
+            if mime in MIME_GZIP :
                 fp = gzip.open(f, 'rb')
             elif mime in MIME_ZIP:
                 with zipfile.ZipFile(f, 'r') as myzip:

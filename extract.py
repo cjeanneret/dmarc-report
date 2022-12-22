@@ -10,16 +10,19 @@ ACCEPTED_MIME = [
         'application/zip',
         'application/x-zip-compressed',
         'application/octet-stream',
+        'application/xml',
         ]
 
 def save_file(attachment, mtime):
     f_name = attachment.get_filename()
-    dest = os.path.join('./reports', f_name)
-    if os.path.exists(dest):
-        return
-    with open(dest, 'wb') as f:
-        f.write(attachment.get_payload(decode=True))
-    os.utime(dest, (mtime, mtime))
+
+    if f_name:
+        dest = os.path.join('./reports', f_name)
+        if os.path.exists(dest):
+            return
+        with open(dest, 'wb') as f:
+            f.write(attachment.get_payload(decode=True))
+        os.utime(dest, (mtime, mtime))
 
 if not os.path.isdir('./reports'):
     os.mkdir('./reports')
